@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-9oz1*p%r$x9ylkdei2c5*%byc@j^nq3!u6vr@x6@)j$l7w(%x9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1','localhost']
 
 
 # Application definition
@@ -41,7 +41,9 @@ INSTALLED_APPS = [
     "HRMSAPP",
     "rest_framework",
     "rest_framework.authtoken",
-    "corsheaders"
+    "corsheaders",
+    "rest_framework_simplejwt"
+    # 'rest_framework_simplejwt.token_blacklist'
 ]
 
 MIDDLEWARE = [
@@ -61,8 +63,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        # 'rest_framework.authentication.SessionAuthentication',
-        # 'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication'
     ]
 }
@@ -101,11 +103,11 @@ WSGI_APPLICATION = "HRMS.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'HRMS',
+        'NAME': 'HRM',
         'USER': 'postgres',
-        'PASSWORD': '98765',
-        'HOST': 'localhost',  # Ya apne PostgreSQL server ka IP
-        'PORT': '5432',  # Default PostgreSQL port
+        'PASSWORD': 'postdjgres',
+        'HOST': 'localhost',  
+        'PORT': '5432',  
     }
 }
 
@@ -134,7 +136,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 
@@ -150,4 +152,4 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-AUTH_USER_MODEL = "HRMSAPP.HR"  # ✅ HR model ko authentication model set karo
+AUTH_USER_MODEL = "HRMSAPP.HR"  
