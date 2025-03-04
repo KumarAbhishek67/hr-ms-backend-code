@@ -1,16 +1,16 @@
 from rest_framework import serializers
 from HRMSAPP.models import *
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-class HRserializer(serializers.ModelSerializer):
+class HRsignupserializer(serializers.ModelSerializer):
     class Meta:
         model = HR
         fields = '__all__'
         extra_kwargs = {
             'email': {'required': True},
-            'username': {'required': True},
             'password': {'required': True, 'write_only': True},
             'first_name':{'required':True},
             'last_name':{'required':True},
+            # 'username':{'required':True}
         }
 
     def create(self, validated_data):
@@ -28,10 +28,49 @@ class HRserializer(serializers.ModelSerializer):
             user.save()
             return user
     
+    
 
 class HRLoginSerializer(TokenObtainPairSerializer):
+    
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
         token['email'] = user.email
         return token
+    
+
+    username_field='email' 
+
+
+    def validate(self, attrs):
+        # Copy email into username (because JWT checks username field internally)
+        attrs['username'] = attrs.get('email')  
+        return super().validate(attrs)
+
+class DomainInterestserializer(serializers.ModelSerializer):
+    class Meta:
+        model = DomainInterest
+        fields = '__all__'
+
+    
+class Qualificationserializer(serializers.ModelSerializer):
+    class Meta:
+        model = Qualification
+        fields = '__all__'
+
+class Candidateserializer(serializers.ModelSerializer):
+    class Meta:
+        model = Candidate
+        fields = '__all__'
+
+class TechAreaserializer(serializers.ModelSerializer):
+    class Meta:
+        model = TechArea
+        fields = '__all__'
+
+class CandidateTechAreaserializer(serializers.ModelSerializer):
+    class Meta:
+        model = CandidateTechArea
+        fields = '__all__'
+
+
