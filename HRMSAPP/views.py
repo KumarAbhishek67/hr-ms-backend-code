@@ -44,71 +44,320 @@ class HRLogoutView(APIView):
         except Exception as e:
             return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
         
-class AddCandidateView(APIView):
+class CandidateView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        candidates = Candidate.objects.filter(is_deleted=False)
+        serializer = Candidateserializer(candidates, many=True)
+        return Response(serializer.data)
+    
     def post(self, request):
         serializer = Candidateserializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
             return Response({"message": "Candidate added successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
-class BaseCRUDView(APIView):
-    permission_classes = [IsAuthenticated]
-    model = None
-    serializer_class = None
-    
-    def get(self, request, pk=None):
-        if pk:
-            obj = get_object_or_404(self.model, pk=pk, is_deleted=False)
-            serializer = self.serializer_class(obj)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        objects = self.model.objects.filter(is_deleted=False)
-        serializer = self.serializer_class(objects, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# class BaseCRUDView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     model = None
+#     serializer_class = None
+    
+#     def get(self, request, pk=None):
+#         if pk:
+#             obj = get_object_or_404(self.model, pk=pk, is_deleted=False)
+#             serializer = self.serializer_class(obj)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+        
+#         objects = self.model.objects.filter(is_deleted=False)
+#         serializer = self.serializer_class(objects, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+#     def post(self, request):
+#         serializer = self.serializer_class(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#     def put(self, request, pk):
+#         obj = get_object_or_404(self.model, pk=pk, is_deleted=False)
+#         serializer = self.serializer_class(obj, data=request.data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+#     def delete(self, request, pk):
+#         obj = get_object_or_404(self.model, pk=pk, is_deleted=False)
+#         obj.is_deleted = True
+#         obj.save()
+#         return Response({"message": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+#     def restore(self, request, pk):
+#         obj = get_object_or_404(self.model, pk=pk, is_deleted=True)
+#         obj.is_deleted = False
+#         obj.save()
+#         return Response({"message": "Restored successfully"}, status=status.HTTP_200_OK)
+    
+# class DomainInterestView(BaseCRUDView):
+#     model = DomainInterest
+#     serializer_class = DomainInterestserializer
+
+# class TechAreaView(BaseCRUDView):
+#     model = TechArea
+#     serializer_class = TechAreaserializer
+
+# class QualificationView(BaseCRUDView):
+#     model = Qualification
+#     serializer_class = Qualificationserializer
+
+# class CandidateTechAreaView(BaseCRUDView):
+#     model = CandidateTechArea
+#     serializer_class = CandidateTechAreaserializer
+
+
+class CandidateGetUpdateDeleteView(APIView):
+    def get_object(self, pk):
+        try:
+            return Candidate.objects.get(pk=pk, is_deleted=False)
+        except Candidate.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        candidate = self.get_object(pk)
+        if candidate:
+            serializer = Candidateserializer(candidate)
+            return Response(serializer.data)
+        return Response({"detail": "Candidate not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, pk):
-        obj = get_object_or_404(self.model, pk=pk, is_deleted=False)
-        serializer = self.serializer_class(obj, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        candidate = self.get_object(pk)
+        if candidate:
+            serializer = Candidateserializer(candidate, data=request.data)
+            if serializer.is_valid():
+                serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Candidate not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, pk):
-        obj = get_object_or_404(self.model, pk=pk, is_deleted=False)
-        obj.is_deleted = True
-        obj.save()
-        return Response({"message": "Deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        candidate = self.get_object(pk)
+        if candidate:
+            candidate.is_deleted = True
+            candidate.DeletedByUserid=request.user
+            candidate.DeletedDateTime=timezone.now()
+            candidate.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Candidate not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    def restore(self, request, pk):
-        obj = get_object_or_404(self.model, pk=pk, is_deleted=True)
-        obj.is_deleted = False
-        obj.save()
-        return Response({"message": "Restored successfully"}, status=status.HTTP_200_OK)
-    
-class DomainInterestView(BaseCRUDView):
-    model = DomainInterest
-    serializer_class = DomainInterestserializer
 
-class TechAreaView(BaseCRUDView):
-    model = TechArea
-    serializer_class = TechAreaserializer
 
-class QualificationView(BaseCRUDView):
-    model = Qualification
-    serializer_class = Qualificationserializer
+class TechAreaCreateGetView(APIView):
+    permission_classes = [IsAuthenticated]
 
-class CandidateTechAreaView(BaseCRUDView):
-    model = CandidateTechArea
-    serializer_class = CandidateTechAreaserializer
+    def get(self, request):
+        tech_areas = TechArea.objects.filter(is_deleted=False)
+        serializer = TechAreaserializer(tech_areas, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = TechAreaserializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+            return Response({"message": "TechArea created successfully"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class TechAreaUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return TechArea.objects.get(pk=pk, is_deleted=False)
+        except TechArea.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        tech_area = self.get_object(pk)
+        if tech_area:
+            serializer = TechAreaserializer(tech_area)
+            return Response(serializer.data)
+        return Response({"detail": "TechArea not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, pk):
+        tech_area = self.get_object(pk)
+        if tech_area:
+            serializer = TechAreaserializer(tech_area, data=request.data)
+            if serializer.is_valid():
+                serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+                return Response({"message": "TechArea updated successfully"})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "TechArea not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        tech_area = self.get_object(pk)
+        if tech_area:
+            tech_area.is_deleted = True
+            tech_area.DeletedByUserid=request.user
+            tech_area.DeletedDateTime=timezone.now()
+            tech_area.save()
+            return Response({"message": "TechArea deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "TechArea not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#domain interest
+class DomainInterestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        domain_areas = DomainInterest.objects.filter(is_deleted=False)
+        serializer = DomainInterestserializer(domain_areas, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = DomainInterestserializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+            return Response({"message": "Doamin Area created successfully"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class DomainInterestUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return DomainInterest.objects.get(pk=pk, is_deleted=False)
+        except DomainInterest.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        domain_area = self.get_object(pk)
+        if domain_area:
+            serializer = TechAreaserializer(domain_area)
+            return Response(serializer.data)
+        return Response({"detail": "Domain not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, pk):
+        domain_area = self.get_object(pk)
+        if domain_area:
+            serializer = DomainInterestserializer(domain_area, data=request.data)
+            if serializer.is_valid():
+                serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+                return Response({"message": "Domain updated successfully"})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Domain not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        domain_area = self.get_object(pk)
+        if domain_area:
+            domain_area.is_deleted = True
+            domain_area.DeletedByUserid=request.user
+            domain_area.DeletedDateTime=timezone.now()
+            domain_area.save()
+            return Response({"message": "Domain deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Domain not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#end domain interest
+class QualificationCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qualifications = Qualification.objects.filter(is_deleted=False)
+        serializer = Qualificationserializer(qualifications, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = Qualificationserializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+            return Response({"message": "Qualification created successfully"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class QualificationUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return Qualification.objects.get(pk=pk, is_deleted=False)
+        except Qualification.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        qualification = self.get_object(pk)
+        if qualification:
+            serializer = Qualificationserializer(qualification)
+            return Response(serializer.data)
+        return Response({"detail": "Qualification not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, pk):
+        qualification = self.get_object(pk)
+        if qualification:
+            serializer = Qualificationserializer(qualification, data=request.data)
+            if serializer.is_valid():
+                serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+                return Response({"message": "Qualification updated successfully"})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Qualification not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        qualification = self.get_object(pk)
+        if qualification:
+            qualification.is_deleted = True
+            qualification.DeletedByUserid=request.user
+            qualification.DeletedDateTime=timezone.now()
+            qualification.save()
+            return Response({"message": "Qualification deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Qualification not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class CandidateTechAreaView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        candidate_tech_areas = CandidateTechArea.objects.filter(is_deleted=False)
+        serializer = CandidateTechAreaserializer(candidate_tech_areas, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = CandidateTechAreaserializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+            return Response({"message": "CandidateTechArea created successfully"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CandidateTechAreaUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return CandidateTechArea.objects.get(pk=pk, is_deleted=False)
+        except CandidateTechArea.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        candidate_tech_area = self.get_object(pk)
+        if candidate_tech_area:
+            serializer = CandidateTechAreaserializer(candidate_tech_area)
+            return Response(serializer.data)
+        return Response({"detail": "CandidateTechArea not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, pk):
+        candidate_tech_area = self.get_object(pk)
+        if candidate_tech_area:
+            serializer = CandidateTechAreaserializer(candidate_tech_area, data=request.data)
+            if serializer.is_valid():
+                serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+                return Response({"message": "CandidateTechArea updated successfully"})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "CandidateTechArea not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        candidate_tech_area = self.get_object(pk)
+        if candidate_tech_area:
+            candidate_tech_area.is_deleted = True
+            candidate_tech_area.DeletedByUserid=request.user
+            candidate_tech_area.DeletedDateTime=timezone.now()
+            candidate_tech_area.save()
+            return Response({"message": "CandidateTechArea deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "CandidateTechArea not found"}, status=status.HTTP_404_NOT_FOUND)

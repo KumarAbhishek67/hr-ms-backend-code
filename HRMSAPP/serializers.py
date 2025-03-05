@@ -16,7 +16,7 @@ class HRsignupserializer(serializers.ModelSerializer):
     def create(self, validated_data):
             user = HR.objects.create(
                 email=validated_data['email'],
-                username=validated_data['username'],
+                # username=validated_data['username'],
                 first_name=validated_data['first_name'],
                 last_name=validated_data['last_name'],
                 date_of_birth=validated_data.get('date_of_birth'),
@@ -39,13 +39,8 @@ class HRLoginSerializer(TokenObtainPairSerializer):
         return token
     
 
-    username_field='email' 
 
-
-    def validate(self, attrs):
-        # Copy email into username (because JWT checks username field internally)
-        attrs['username'] = attrs.get('email')  
-        return super().validate(attrs)
+    
 
 class DomainInterestserializer(serializers.ModelSerializer):
     class Meta:

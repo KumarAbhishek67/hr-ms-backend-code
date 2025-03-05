@@ -8,8 +8,8 @@ class HR(AbstractUser):
     )
     email = models.CharField(max_length=200, unique=True)
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
-
+    REQUIRED_FIELDS = []
+    username=None
     # username = models.CharField(max_length=255, unique=True)
     
     date_of_birth = models.DateField(null=True, blank=True)
@@ -23,10 +23,10 @@ class HR(AbstractUser):
     
 class DomainInterest(models.Model):
     domain_name = models.CharField(max_length=255, unique=True)
-    modified_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_domains")
-    modified_date = models.DateTimeField(auto_now=True)
-    deleted_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_domains", blank=True)
-    deleted_date = models.DateTimeField(blank=True, null=True)
+    ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_domains")
+    ModifyDateTime = models.DateTimeField(auto_now=True)
+    DeletedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_domains", blank=True)
+    DeletedDateTime = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
@@ -35,10 +35,10 @@ class DomainInterest(models.Model):
 class Qualification(models.Model):
     qualification_name = models.CharField(max_length=255, unique=True)
     qualification_desc = models.TextField(blank=True, null=True)
-    modified_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_qualification")
-    modified_date = models.DateTimeField(auto_now=True)
-    deleted_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_qualification", blank=True)
-    deleted_date = models.DateTimeField(blank=True, null=True)
+    ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_qualification")
+    ModifyDateTime = models.DateTimeField(auto_now=True)
+    DeletedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_qualification", blank=True)
+    DeletedDateTime = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
@@ -53,7 +53,7 @@ class Candidate(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=13)
-    resume = models.FileField(upload_to="resumes/")
+    cv = models.FileField(upload_to="cv/")
     is_experienced = models.BooleanField(choices=EXPERIENCE_CHOICES, default=False)
     date_of_birth = models.DateField()
     father_name = models.CharField(max_length=255)
@@ -63,13 +63,13 @@ class Candidate(models.Model):
     gap = models.IntegerField(default=0, null=True, blank=True)
     last_company = models.CharField(max_length=255)
     exp_years = models.IntegerField(default=0, null=True, blank=True)
-    domain_of_interest = models.ManyToManyField(DomainInterest, related_name='candidates', blank=True, null=True)
-    qualification = models.ManyToManyField(Qualification, related_name='candidates', blank=True, null=True)
+    domain_of_interest = models.ManyToManyField(DomainInterest, related_name='candidates', blank=True )
+    qualification = models.ManyToManyField(Qualification, related_name='candidates', blank=True )
     ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='modifier')
     ModifyDateTime = models.DateTimeField(null=True, blank=True)
     DeletedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='delete_record')
     DeletedDateTime = models.DateTimeField(null=True, blank=True)
-    IsDeleted = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -77,10 +77,10 @@ class Candidate(models.Model):
 
 class TechArea(models.Model):
     tech_specification = models.CharField(max_length=255, unique=True)
-    modified_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_tech")
-    modified_date = models.DateTimeField(auto_now=True)
-    deleted_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_tech", blank=True)
-    deleted_date = models.DateTimeField(blank=True, null=True)
+    ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_tech")
+    ModifyDateTime = models.DateTimeField(auto_now=True)
+    DeletedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_tech", blank=True)
+    DeletedDateTime = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
@@ -91,10 +91,10 @@ class TechArea(models.Model):
 class CandidateTechArea(models.Model):
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE)
     tech_area = models.ForeignKey(TechArea, on_delete=models.CASCADE)
-    modified_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_candidate_tech")
-    modified_date = models.DateTimeField(auto_now=True)
-    deleted_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_candidate_tech", blank=True)
-    deleted_date = models.DateTimeField(blank=True, null=True)
+    ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="modified_candidate_tech")
+    ModifyDateTime = models.DateTimeField(auto_now=True)
+    DeletedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, related_name="deleted_candidate_tech", blank=True)
+    DeletedDateTime = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
