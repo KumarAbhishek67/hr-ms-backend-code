@@ -46,14 +46,14 @@ class Qualification(models.Model):
 
     
 class Candidate(models.Model):
-    EXPERIENCE_CHOICES = [
+    EXPERIENCE_CHOICES = (
         (True, 'Yes'),
         (False, 'No'),
-    ]
+    )
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=13)
-    cv = models.FileField(upload_to="cv/")
+    mobile = models.CharField(max_length=13)
+    resume = models.FileField(upload_to="resume/")
     is_experienced = models.BooleanField(choices=EXPERIENCE_CHOICES, default=False)
     date_of_birth = models.DateField()
     father_name = models.CharField(max_length=255)
@@ -61,10 +61,10 @@ class Candidate(models.Model):
     city = models.CharField(max_length=255)
     state = models.CharField(max_length=255)
     gap = models.IntegerField(default=0, null=True, blank=True)
-    last_company = models.CharField(max_length=255)
+    last_company = models.CharField(max_length=255, null=True, blank=True)
     exp_years = models.IntegerField(default=0, null=True, blank=True)
-    domain_of_interest = models.ManyToManyField(DomainInterest, related_name='candidates', blank=True )
-    qualification = models.ManyToManyField(Qualification, related_name='candidates', blank=True )
+    domain_of_interest = models.ForeignKey(DomainInterest, related_name='candidates_interest',on_delete=models.CASCADE)
+    qualification = models.ForeignKey(Qualification, related_name='candidates_qualification',on_delete=models.CASCADE )
     ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='modifier')
     ModifyDateTime = models.DateTimeField(null=True, blank=True)
     DeletedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='delete_record')
