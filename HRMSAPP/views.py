@@ -54,6 +54,15 @@ class CandidateView(APIView):
         return Response(serializer.data)
     
     def post(self, request):
+        existing_candidate = Candidate.objects.filter(email=request.data.get('email'),is_deleted=True).first()
+
+        if existing_candidate:
+            existing_candidate.is_deleted = False
+            existing_candidate.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_candidate.ModifiedByUserid = request.user
+            existing_candidate.ModifyDateTime = timezone.now()
+            existing_candidate.save()
+            return Response({"message": "Candidate restored successfully"}, status=status.HTTP_200_OK)
         serializer = Candidateserializer(data=request.data)
         if serializer.is_valid():
             serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
@@ -107,6 +116,15 @@ class TechAreaCreateGetView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
+        existing_tech = TechArea.objects.filter(tech_specification=request.data.get('tech_specification'),is_deleted=True).first()
+
+        if existing_tech:
+            existing_tech.is_deleted = False
+            existing_tech.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_tech.ModifiedByUserid = request.user
+            existing_tech.ModifyDateTime = timezone.now()
+            existing_tech.save()
+            return Response({"message": "TechArea restored successfully"}, status=status.HTTP_200_OK)
         serializer = TechAreaserializer(data=request.data)
         if serializer.is_valid():
             serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
@@ -159,11 +177,23 @@ class DomainInterestView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
+        existing_domain = DomainInterest.objects.filter(domain_name=request.data.get('domain_name'),is_deleted=True).first()
+
+        if existing_domain:
+            # Reactivate the deleted qualification
+            existing_domain.is_deleted = False
+            existing_domain.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_domain.ModifiedByUserid = request.user
+            existing_domain.ModifyDateTime = timezone.now()
+            existing_domain.save()
+            return Response({"message": "Domain interest restored successfully"}, status=status.HTTP_200_OK)
+        
         serializer = DomainInterestserializer(data=request.data)
         if serializer.is_valid():
             serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
             return Response({"message": "Doamin Area created successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
 
 class DomainInterestUpdateDeleteView(APIView):
     permission_classes = [IsAuthenticated]
@@ -211,6 +241,19 @@ class QualificationCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
+
+        existing_qualification = Qualification.objects.filter(qualification_name=request.data.get('qualification_name'),is_deleted=True).first()
+
+        if existing_qualification:
+            # Reactivate the deleted qualification
+            existing_qualification.is_deleted = False
+            existing_qualification.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_qualification.ModifiedByUserid = request.user
+            existing_qualification.ModifyDateTime = timezone.now()
+            existing_qualification.save()
+            return Response({"message": "Qualification restored successfully"}, status=status.HTTP_200_OK)
+        
+
         serializer = Qualificationserializer(data=request.data)
         if serializer.is_valid():
             serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
