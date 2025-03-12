@@ -1,14 +1,17 @@
+from django.contrib.auth import authenticate, login
 # from django.shortcuts import render
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-# from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import check_password
+from django.contrib.sessions.backends.db import SessionStore
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .serializers import *
 from django.utils import timezone
-from django.shortcuts import get_object_or_404
-from rest_framework_simplejwt.views import TokenObtainPairView
+# from django.shortcuts import get_object_or_404
+# from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Create your views here.
 
@@ -21,30 +24,160 @@ class HRSignupView(APIView):
             return Response({"message": "HR registered successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class HRLoginView(TokenObtainPairView):
+class HRLoginView(APIView):
     permission_classes = [AllowAny]
-    def post(self, request, *args, **kwargs):
-        serializer = HRLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.user
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
-        request.session['user_id'] = user.id  # Store session
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+#This is using JWT refresh token login but will be needed to add tokenobtainpairview() & tokenrefreshview()
 
-class HRLogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+
+    # def post(self, request):
+    #     email = request.data.get("email")
+    #     password = request.data.get("password")
+
+    #     user = authenticate(request, username=email, password=password)  # Assuming email as username
+    #     if user is not None:
+    #         refresh = RefreshToken.for_user(user)  # Generate JWT tokens
+            
+    #         return Response({
+    #             'access_token': str(refresh.access_token),
+    #             'refresh_token': str(refresh)
+    #         }, status=status.HTTP_200_OK)
+    #     else:
+    #         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+#This login using Session and token same as BDE
+
 
     def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
         try:
-            if 'user_id' in request.session:
-                del request.session['user_id']  # Delete session
-                return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
-            else:
-                return Response({'error': 'No active session'}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+            user = HR.objects.get(email=email)
+        except HR.DoesNotExist:
+            return Response({"response": "No User exists"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not check_password(password, user.password):
+            return Response({"response": "Incorrect Password"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if user.is_deleted:
+            return Response({'response': 'No User Found'}, status=status.HTTP_204_NO_CONTENT)
+
+        # datejoined=timezone.datetime.today().date()
         
+
+        session = SessionStore()
+        session['user_id'] = user.id
+        session['user_email'] = email
+        session.save()
+
+        session_key = session.session_key
+
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        return Response({
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'session_key': session_key,
+            'email': user.email ,
+            'first_name': user.first_name,
+            'last_name': user.last_name
+        }, status=status.HTTP_200_OK)     
+
+
+    #using CSRF
+
+
+#     def post(self, request):
+#         email = request.data.get("email")
+#         password = request.data.get("password")
+
+#         user = authenticate(request, email=email, password=password)
+
+#         if user is not None:
+#             login(request, user)  # Logs the user in and creates a session
+            
+#             # Store additional user details in session
+#             request.session['user_info'] = {
+#                 'user_id': user.id,
+#                 'email': user.email,
+#                 'last_login': str(timezone.now())  # Store last login timestamp
+#             }
+          
+#             return Response({
+#                 'message': 'Login successful',
+#                 'user_info': request.session['user_info']
+#             }, status=status.HTTP_200_OK)
+
+#         else:
+#             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class HRLogoutView(APIView):
+
+    #this logout using jwt refresh token but will be needed to add tokenobtainpairview() & tokenrefreshview()
+
+    # permission_classes = [AllowAny]  # Anyone can access logout
+
+    # def post(self, request):
+    #     try:
+    #         refresh_token = request.data.get('refresh_token')
+    #         if refresh_token:
+    #             token = RefreshToken(refresh_token)
+    #             token.blacklist()  # Blacklist the refresh token
+    #             return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
+    #         else:
+    #             return Response({'error': 'Refresh token missing'}, status=status.HTTP_400_BAD_REQUEST)
+    #     except Exception as e:
+    #         return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+    #This logout using session+token same as BDE
+
+
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        session_key = request.data.get('session_key')
+        # session_key = SessionStore(session_key=session_key)
+      
+        if session_key:
+            try:
+                session = SessionStore(session_key=session_key)
+                user_id = session.get('user_id')
+               
+                if user_id:
+                    try:
+                      
+                        user_data=HR.objects.get(id=user_id)
+                        user_data.last_login = timezone.now()
+                        user_data.save()  
+
+                        session.delete()
+
+                        return Response({'response': 'User Logout Successfully'}, status=status.HTTP_200_OK)
+                    except HR.DoesNotExist:
+                        pass
+            except Exception as e:
+                pass
+        return Response({'response': 'You are not logged in!'}, status=status.HTTP_204_NO_CONTENT)
+    
+
+    #using CSRF sessions
+
+
+    # def post(self, request):
+    #     try:
+    #         if 'user_info' in request.session:
+    #             del request.session['user_info']  # Remove user session data
+    #             return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
+    #         else:
+    #             return Response({'error': 'No active session'}, status=status.HTTP_400_BAD_REQUEST)
+    #     except Exception as e:
+    #         return Response({'error': 'Logout failed'}, status=status.HTTP_400_BAD_REQUEST)
+
 class CandidateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -58,7 +191,7 @@ class CandidateView(APIView):
 
         if existing_candidate:
             existing_candidate.is_deleted = False
-            existing_candidate.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_candidate.DeletedDateTime = None  
             existing_candidate.ModifiedByUserid = request.user
             existing_candidate.ModifyDateTime = timezone.now()
             existing_candidate.save()
@@ -120,7 +253,7 @@ class TechAreaCreateGetView(APIView):
 
         if existing_tech:
             existing_tech.is_deleted = False
-            existing_tech.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_tech.DeletedDateTime = None  
             existing_tech.ModifiedByUserid = request.user
             existing_tech.ModifyDateTime = timezone.now()
             existing_tech.save()
@@ -180,9 +313,9 @@ class DomainInterestView(APIView):
         existing_domain = DomainInterest.objects.filter(domain_name=request.data.get('domain_name'),is_deleted=True).first()
 
         if existing_domain:
-            # Reactivate the deleted qualification
+           
             existing_domain.is_deleted = False
-            existing_domain.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_domain.DeletedDateTime = None 
             existing_domain.ModifiedByUserid = request.user
             existing_domain.ModifyDateTime = timezone.now()
             existing_domain.save()
@@ -245,9 +378,9 @@ class QualificationCreateView(APIView):
         existing_qualification = Qualification.objects.filter(qualification_name=request.data.get('qualification_name'),is_deleted=True).first()
 
         if existing_qualification:
-            # Reactivate the deleted qualification
+     
             existing_qualification.is_deleted = False
-            existing_qualification.DeletedDateTime = None  # Reset DeletedDateTime to NULL
+            existing_qualification.DeletedDateTime = None 
             existing_qualification.ModifiedByUserid = request.user
             existing_qualification.ModifyDateTime = timezone.now()
             existing_qualification.save()
