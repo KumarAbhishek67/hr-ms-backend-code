@@ -138,7 +138,7 @@ class HRLogoutView(APIView):
     #This logout using session+token same as BDE
 
 
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     def post(self, request):
         session_key = request.data.get('session_key')
         # session_key = SessionStore(session_key=session_key)
