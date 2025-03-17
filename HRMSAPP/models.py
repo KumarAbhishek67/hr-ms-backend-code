@@ -126,3 +126,34 @@ class CandidateTechArea(models.Model):
 
     def __str__(self):
         return f"{self.candidate.name} - {self.tech_area.tech_specification}"
+    
+class Interview(models.Model):
+    STAGE_CHOICES=(
+        ('Screening', 'Screening'),
+        ('Technical', 'Technical'),
+        ('HR', 'HR'),
+        ('Final', 'Final')
+    )
+    MODE_CHOICES=( ('Online', 'Online'),
+        ('Offline', 'Offline'))
+    STATUS_CHOICES=(  ('Scheduled', 'Scheduled'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'))
+    candidate_profile = models.ForeignKey(Candidate, related_name='interview_candidate',on_delete=models.CASCADE )
+    ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='modified_interviews')
+    ModifyDateTime = models.DateTimeField(null=True, blank=True)
+    DeletedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='deleted_interviews')
+    DeletedDateTime = models.DateTimeField(null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)    
+    joining_date = models.DateField(null=True, blank=True)
+    interview_date = models.DateField()
+    interview_time = models.TimeField()
+    interviewers = models.TextField(null=True, blank=True) 
+    stage = models.CharField(max_length=50, choices=STAGE_CHOICES)
+    mode = models.CharField(max_length=50, choices=MODE_CHOICES)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES,null=True, blank=True)
+    remark = models.TextField(blank=True, null=True)
+    meeting_link = models.URLField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Interview for {self.candidate_profile.name} on {self.interview_date} at {self.interview_time}"

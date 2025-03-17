@@ -479,3 +479,67 @@ class CandidateTechAreaUpdateDeleteView(APIView):
             candidate_tech_area.save()
             return Response({"message": "CandidateTechArea deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "CandidateTechArea not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+class ScheduleInterviewCreate(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        schedules = Interview.objects.filter(is_deleted=False)
+        serializer = Interviewserializer(schedules, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+
+        existing_interview = Interview.objects.filter(candidate_profile=request.data.get('candidate_profile'),interview_date=request.data.get('interview_date'),interview_time=request.data.get('interview_time'),is_deleted=True).first()
+
+        if existing_interview:
+     
+            existing_interview.is_deleted = False
+            existing_interview.DeletedDateTime = None
+            existing_interview.ModifiedByUserid = request.user
+            existing_interview.ModifyDateTime = timezone.now()
+            existing_interview.save()
+            return Response({"message": "Interview restored successfully"}, status=status.HTTP_200_OK)
+        
+
+        serializer = Interviewserializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+            return Response({"message": "Interview created successfully"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class InterviewUpdateDelete(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return Interview.objects.get(pk=pk, is_deleted=False)
+        except Interview.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        schedule = self.get_object(pk)
+        if schedule:
+            serializer = Interviewserializer(schedule)
+            return Response(serializer.data)
+        return Response({"detail": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, pk):
+        schedule = self.get_object(pk)
+        if schedule:
+            serializer = Interviewserializer(schedule, data=request.data)
+            if serializer.is_valid():
+                serializer.save(ModifiedByUserid = request.user, ModifyDateTime = timezone.now())
+                return Response({"message": "Schedule updated successfully"})
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        schedule = self.get_object(pk)
+        if schedule:
+            schedule.is_deleted = True
+            schedule.DeletedByUserid=request.user
+            schedule.DeletedDateTime=timezone.now()
+            schedule.save()
+            return Response({"message": "Schedule deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)

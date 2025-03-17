@@ -68,4 +68,9 @@ class CandidateTechAreaserializer(serializers.ModelSerializer):
         model = CandidateTechArea
         fields = '__all__'
 
+class Interviewserializer(serializers.ModelSerializer):
+    class Meta:
+        unique_together = ('candidate_profile', 'interview_date', 'interview_time')
+        model = Interview
+        fields = '__all__'
 
