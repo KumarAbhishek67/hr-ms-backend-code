@@ -1,5 +1,7 @@
 from django.contrib import admin
 from .models import HR, Candidate, TechArea, Qualification, CandidateTechArea, DomainInterest
+from .models import Interview
+from django.urls import reverse
 from django.utils.html import format_html
 
 # we make in logic to show in data basee format
@@ -75,6 +77,20 @@ class DomainInterestAdmin(admin.ModelAdmin):
     
     def clickable_domain_name(self, obj):
         return format_html(f'<a href="{obj.domain_name.url}" target="_blank">{obj.domain_name}</a>')
+    
+# Interview Admin
+# class InterviewAdmin(admin.ModelAdmin):
+#     list_display = ('id', 'clickable_candidate', 'interview_date', 'interview_time', 'interview_status')
+#     list_display_links = ('id', 'clickable_candidate')
+#     search_fields = ('candidate__name',)  # ForeignKey field ke saath __name use karna
+#     list_filter = ['interview_date', 'interview_time', 'interview_status']
+#     list_per_page = 20
+
+#     def clickable_candidate(self, obj):
+#         url = reverse('admin:HRMSAPP_candidate_change', args=[obj.candidate.id])  # Admin panel URL
+#         return format_html(f'<a href="{url}" target="_blank">{obj.candidate.name}</a>')
+#     clickable_candidate.short_description = "Candidate"
+
 # Register your models here.
 admin.site.register(HR,HrAdmin)
 admin.site.register(Candidate, candidateAdmin)
@@ -82,3 +98,4 @@ admin.site.register(TechArea, TechAreaAdmin)
 admin.site.register(Qualification, qualificationAdmin) 
 admin.site.register(CandidateTechArea, CandidateTechAreaAdmin)
 admin.site.register(DomainInterest, DomainInterestAdmin)
+admin.site.register(Interview)

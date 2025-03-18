@@ -1,8 +1,10 @@
 # from django.shortcuts import render
 from rest_framework import status
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import HR, Candidate
+from django.utils.timezone import now
 from .serializers import HRSignupSerializer, CandidateSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,8 +14,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import TechArea, Qualification, CandidateTechArea, DomainInterest
-from .serializers import TechAreaSerializer, QualificationSerializer, CandidateTechAreaSerializer, DomainInterestSerializer
+from .models import Interview
+from .serializers import TechAreaSerializer, QualificationSerializer, CandidateTechAreaSerializer, DomainInterestSerializer, InterviewSerializer
 from .permission import AllowRefreshTokenOnly  # Import custom permission
+from django.db import models
+from django.db.models import Q
 
 # Create your views here.
 
@@ -40,7 +45,7 @@ class HRLoginView(TokenObtainPairView):
     
 # this is my Logout API
 class HRLogoutView(APIView):
-    permission_classes = [AllowRefreshTokenOnly]  # ✅ Sirf refresh token check hoga
+    permission_classes = [AllowRefreshTokenOnly]
 
     def post(self, request):
         try:
@@ -55,6 +60,22 @@ class HRLogoutView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# Candidate Search View API
+class CandidateSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('q', '')
+        if not query:
+            return Response({"error": "Query parameter `q` is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        candidates = Candidate.objects.filter(is_deleted=False).filter(
+            Q(name__icontains=query) | Q(mobile__icontains=query) 
+        )
+
+        serializer = CandidateSerializer(candidates, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # this is my Candidate API
 class AddCandidateView(APIView):
@@ -107,19 +128,6 @@ class CandidateRetrieveUpdateDeleteView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "Candidate not found"}, status=status.HTTP_404_NOT_FOUND)
 
-# class TechAreaViewSet(APIView):
-#     queryset = TechArea.objects.all()
-#     serializer_class = TechAreaSerializer
-
-# class QualificationViewSet(APIView):
-#     queryset = Qualification.objects.all()
-#     serializer_class = QualificationSerializer
-
-# class CandidateTechAreaViewSet(APIView):
-#     queryset = CandidateTechArea.objects.all()
-#     serializer_class = CandidateTechAreaSerializer        
-
-# TechArea API
 class TechAreaListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -169,6 +177,23 @@ class TechAreaRetrieveUpdateDeleteView(APIView):
             return Response({"message": "TechArea deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "TechArea not found"}, status=status.HTTP_404_NOT_FOUND)
 
+# Qualification search API
+class QualificationSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qualification_name = request.query_params.get('qualification', '')
+        if not qualification_name:
+            return Response({"error": "Qualification parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        qualification = Qualification.objects.filter(qualification_name__iexact=qualification_name).first()
+
+        if not qualification:
+            return Response({"error": "No candidates found for this qualification"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = QualificationSerializer(qualification)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
 # Qualification API
 class QualificationListCreateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -268,68 +293,166 @@ class CandidateTechAreaRetrieveUpdateDeleteView(APIView):
             candidate_tech_area.save()
             return Response({"message": "CandidateTechArea deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "CandidateTechArea not found"}, status=status.HTTP_404_NOT_FOUND)
-    
-# DomainInterest API
+        
 class DomainInterestListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        domain_interests = DomainInterest.objects.filter(is_deleted=False)
-        serializer = DomainInterestSerializer(domain_interests, many=True)
-        return Response(serializer.data)
+        """ Fetch all active domain interests """
+        domain_areas = DomainInterest.objects.filter(is_deleted=False)
+        serializer = DomainInterestSerializer(domain_areas, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        serializer = DomainInterestSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "DomainInterest created successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
-    
-    serializer_class = DomainInterestSerializer
+        """ Add new domain interest or restore deleted one """
+        domain_name = request.data.get('domain_name')
 
-    def get_queryset(self):
-        """
-        Fetch active records by default. If `include_deleted=true`, fetch all records.
-        """
-        include_deleted = self.request.query_params.get('include_deleted', 'false')
-        if include_deleted.lower() == 'true':
-            return DomainInterest.objects.all()  # ✅ Fetch all (active + deleted)
-        return DomainInterest.objects.filter(is_deleted=False)  # ✅ Fetch only active
-    
-class RestoreDomainInterestView(APIView):
-    """API to Restore Deleted Domain Interest"""
-    def post(self, request, pk):
-        try:
-            domain_interest = DomainInterest.objects.get(pk=pk, is_deleted=True)
-            domain_interest.restore()
-            return Response({"message": "Domain Interest restored successfully"}, status=status.HTTP_200_OK)
-        except DomainInterest.DoesNotExist:
-            return Response({"error": "Record not found"}, status=status.HTTP_404_NOT_FOUND)
+        # 1. Check if deleted entry exists
+        existing_domain = DomainInterest.objects.filter(domain_name=domain_name).first()
+
+        if existing_domain:
+            if existing_domain.is_deleted:
+                existing_domain.is_deleted = False
+                existing_domain.deleted_date = None  
+                existing_domain.deleted_by = None  
+                existing_domain.modified_by = request.user  
+                existing_domain.modified_date = timezone.now()  
+                existing_domain.save()
+                return Response({"message": "Domain interest restored successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Domain interest already exists"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Create new domain interest
+        serializer = DomainInterestSerializer(data=request.data, context={'request': request})
         
+        if serializer.is_valid():
+            serializer.save()  # Don't pass extra fields here, they are handled in `create()` method
+            return Response({"message": "Domain interest created successfully"}, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class DomainInterestRetrieveUpdateDeleteView(APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def get_object(self, pk):
         try:
-            return DomainInterest.objects.get(pk=pk, is_deleted=False)
+            return DomainInterest.objects.get(id=pk, is_deleted=False)
         except DomainInterest.DoesNotExist:
-            return None    
-        
-    
+            return None
+
+    def get(self, request, pk):
+        domain = self.get_object(pk)
+        if domain:
+            serializer = DomainInterestSerializer(domain)
+            return Response(serializer.data)
+        return Response({"error": "Domain interest not found"}, status=status.HTTP_404_NOT_FOUND)
+
     def put(self, request, pk):
-        domain_interest = self.get_object(pk)
-        if domain_interest:
-            serializer = DomainInterestSerializer(domain_interest, data=request.data)
+        domain = self.get_object(pk)
+        if domain:
+            serializer = DomainInterestSerializer(domain, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"message": "Domain Interest updated successfully"})
+                return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"detail": "Domain Interest not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Domain interest not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, pk):
-        domain_interest = self.get_object(pk)
-        if domain_interest:
-            domain_interest.is_deleted = True
-            domain_interest.save()
-            return Response({"message": "Domain Interest deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-        return Response({"detail": "Domain Interest not found"}, status=status.HTTP_404_NOT_FOUND)    
+        domain = self.get_object(pk)
+        if domain:
+            domain.is_deleted = True
+            domain.deleted_by = request.user
+            domain.deleted_date = timezone.now()
+            domain.save()
+            return Response({"message": "Domain interest deleted successfully"}, status=status.HTTP_200_OK)
+        return Response({"error": "Domain interest not found"}, status=status.HTTP_404_NOT_FOUND)   
+
+# Interview API
+class InterviewListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            interviews = Interview.objects.filter(is_deleted=False)
+            serializer = InterviewSerializer(interviews, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        try:
+            serializer = InterviewSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class InterviewRetrieveUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return Interview.objects.get(id=pk, is_deleted=False)
+        except Interview.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        interview = self.get_object(pk)
+        if interview is None:
+            return Response({"error": "Interview not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = InterviewSerializer(interview)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        interview = self.get_object(pk)
+        if interview is None:
+            return Response({"error": "Interview not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            serializer = InterviewSerializer(interview, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, pk):
+        interview = self.get_object(pk)
+        if interview is None:
+            return Response({"error": "Interview not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            interview.is_deleted = True
+            interview.DeletedByUserid = request.user
+            interview.DeletedDateTime = now()
+            interview.save()
+            return Response({"message": "Interview marked as deleted"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RescheduleInterviewView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            interview = Interview.objects.get(id=pk, is_deleted=False)
+            
+            new_date = request.data.get("rescheduled_date")
+            new_time = request.data.get("rescheduled_time")
+            
+            if not new_date or not new_time:
+                return Response({"error": "Rescheduled date and time are required."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            interview.interview_date = new_date
+            interview.interview_time = new_time
+            interview.ModifiedByUserid = request.user
+            interview.ModifyDateTime = now()
+            interview.save()
+            
+            return Response({"message": "Interview successfully rescheduled!", "new_date": new_date, "new_time": new_time}, status=status.HTTP_200_OK)
+        
+        except Interview.DoesNotExist:
+            return Response({"error": "Interview not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
