@@ -128,17 +128,17 @@ class CandidateTechArea(models.Model):
         return f"{self.candidate.name} - {self.tech_area.tech_specification}"
     
 class Interview(models.Model):
-    STAGE_CHOICES=(
+    ROUND_CHOICES=(
         ('Screening', 'Screening'),
         ('Technical', 'Technical'),
         ('HR', 'HR'),
         ('Final', 'Final')
     )
-    MODE_CHOICES=( ('Online', 'Online'),
-        ('Offline', 'Offline'))
-    STATUS_CHOICES=(  ('Scheduled', 'Scheduled'),
-        ('Completed', 'Completed'),
-        ('Cancelled', 'Cancelled'))
+    MODE_CHOICES=( ('Virtual', 'Virtual'),
+        ('OnSite', 'OnSite'))
+    STATUS_CHOICES=(  ('Pending', 'Pending'),
+        ('Selected', 'Selected'),
+        ('Rejected', 'Rejected'))
     candidate_profile = models.ForeignKey(Candidate, related_name='interview_candidate',on_delete=models.CASCADE )
     ModifiedByUserid = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='modified_interviews')
     ModifyDateTime = models.DateTimeField(null=True, blank=True)
@@ -149,7 +149,7 @@ class Interview(models.Model):
     interview_date = models.DateField()
     interview_time = models.TimeField()
     interviewers = models.TextField(null=True, blank=True) 
-    stage = models.CharField(max_length=50, choices=STAGE_CHOICES)
+    round = models.CharField(max_length=50, choices=ROUND_CHOICES)
     mode = models.CharField(max_length=50, choices=MODE_CHOICES)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES,null=True, blank=True)
     remark = models.TextField(blank=True, null=True)
