@@ -18,5 +18,6 @@ urlpatterns = [
     path('candidate-tech-area/<int:pk>/', CandidateTechAreaUpdateDeleteView.as_view(), name='candidate-tech-area'),
     path('schedule-interview/', ScheduleInterviewCreate.as_view(), name='schedule_interview'),
     path('schedule-interview/<int:pk>/', InterviewUpdateDelete.as_view(), name='schedule-interview'),
+    path('search/', SearchAPIView.as_view(), name='search-api')
 
     ]

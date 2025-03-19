@@ -10,6 +10,8 @@ from .models import *
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .serializers import *
 from django.utils import timezone
+from django.db.models import Q  # 👈 Yeh line add karni hai
+
 # from django.shortcuts import get_object_or_404
 # from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -543,3 +545,25 @@ class InterviewUpdateDelete(APIView):
             schedule.save()
             return Response({"message": "Schedule deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "Schedule not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class SearchAPIView(APIView):
+    def get(self, request):
+        search_type = request.GET.get('type', '').strip()  # Remove extra spaces
+        search_query = request.GET.get('query', '').strip()  # Remove extra spaces
+
+        print(f"Search Type: {search_type}, Query: {search_query}")  # Debugging
+
+        if search_type == "Candidate":
+            candidates = Candidate.objects.filter(
+                Q(name__icontains=search_query) | 
+                Q(email__icontains=search_query) |
+                Q(mobile__icontains=search_query)
+            )
+
+            print(f"Candidates Found: {candidates}")  # Debugging
+
+            serializer = Candidateserializer(candidates, many=True)
+            return Response(serializer.data)
+
+        return Response({"error": "Invalid search type or no query provided."}, status=400)
