@@ -549,10 +549,9 @@ class InterviewUpdateDelete(APIView):
 
 class SearchAPIView(APIView):
     def get(self, request):
-        search_type = request.GET.get('type', '').strip()  # Remove extra spaces
-        search_query = request.GET.get('query', '').strip()  # Remove extra spaces
+        search_type = request.GET.get('type').strip()  # Remove extra spaces
+        search_query = request.GET.get('query').strip()  # Remove extra spaces
 
-        print(f"Search Type: {search_type}, Query: {search_query}")  # Debugging
 
         if search_type == "Candidate":
             candidates = Candidate.objects.filter(
@@ -561,7 +560,7 @@ class SearchAPIView(APIView):
                 Q(mobile__icontains=search_query)
             )
 
-            print(f"Candidates Found: {candidates}")  # Debugging
+          
 
             serializer = Candidateserializer(candidates, many=True)
             return Response(serializer.data)
