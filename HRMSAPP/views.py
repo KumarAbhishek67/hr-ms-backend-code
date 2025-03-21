@@ -82,7 +82,7 @@ class AddCandidateView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        candidates = Candidate.objects.filter(is_deleted=False).prefetch_related('candidate_techareas__tech_area')
+        candidates = Candidate.objects.filter(is_deleted=False).prefetch_related('candidate_tech_areas__tech_area').all()
         serializer = CandidateSerializer(candidates, many=True)
         return Response(serializer.data)
     
@@ -284,10 +284,10 @@ class CandidateTechAreaListCreateView(APIView):
         except TechArea.DoesNotExist:
             return Response({"error": "Invalid TechArea ID"}, status=status.HTTP_400_BAD_REQUEST)
 
-        data['candidate'] = candidate.id
-        data['tech_area'] = tech_area.id
+        # data['candidate'] = candidate.id
+        # data['tech_area'] = tech_area.id
 
-        serializer = CandidateTechAreaSerializer(data=data)
+        serializer = CandidateTechAreaSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "CandidateTechArea created successfully"}, status=status.HTTP_201_CREATED)

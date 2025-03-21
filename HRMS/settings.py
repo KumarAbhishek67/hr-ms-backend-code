@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-9oz1*p%r$x9ylkdei2c5*%byc@j^nq3!u6vr@x6@)j$l7w(%x9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.1.32"] 
+ALLOWED_HOSTS = ["192.168.1.32","127.0.0.1"] 
 
 # MEDIA FILE UPLOAD CONFIGURATION
 MEDIA_URL = "/media/"
@@ -78,13 +78,13 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,  # ✅ Ensure ki blacklist enable ho
+    'BLACKLIST_AFTER_ROTATION': True,  
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',), # ✅ RefreshToken hona chahiye
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',), 
 }
 
 ROOT_URLCONF = "HRMS.urls"
@@ -147,7 +147,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 

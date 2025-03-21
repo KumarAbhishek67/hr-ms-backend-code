@@ -98,8 +98,8 @@ class TechArea(models.Model):
 
 # CandidateTechArea Model (Junction Table)
 class CandidateTechArea(models.Model):
-    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, null=True, blank=True, related_name="candidate_tech_areas")
-    tech_area = models.ForeignKey(TechArea, on_delete=models.CASCADE, null=True, blank=True)
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name="candidate_tech_areas")
+    tech_area = models.ForeignKey(TechArea, on_delete=models.CASCADE)
     modified_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='modified_candidate_tech_areas')
     modified_date = models.DateTimeField(auto_now=True, null=True, blank=True)
     deleted_by = models.ForeignKey(HR, on_delete=models.SET_NULL, null=True, blank=True, related_name='deleted_candidate_tech_areas')
